@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from tensorflow.keras.layers import Input, Embedding, LSTM, GRU, SimpleRNN, Bidirectional, Dense, Concatenate
+from tensorflow.keras.layers import Input, Embedding, LSTM, Bidirectional, Dense, Concatenate, RNN, GRUCell, SimpleRNNCell
 from tensorflow.keras.models import Model
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
@@ -56,16 +56,17 @@ def run_translation_experiment(rnn_type='lstm', epochs=30):
     enc_emb = Embedding(num_encoder_tokens, embedding_dim)(encoder_inputs)
     
     if rnn_type == 'rnn':
-        encoder_outputs, state_h = SimpleRNN(latent_dim, return_state=True)(enc_emb)
+        # FIX: Bypassing buggy wrapper with RNN(SimpleRNNCell)
+        encoder_outputs, state_h = RNN(SimpleRNNCell(latent_dim), return_state=True)(enc_emb)
         encoder_states = [state_h]
     elif rnn_type == 'gru':
-        encoder_outputs, state_h = GRU(latent_dim, return_state=True)(enc_emb)
+        # FIX: Bypassing buggy wrapper with RNN(GRUCell)
+        encoder_outputs, state_h = RNN(GRUCell(latent_dim), return_state=True)(enc_emb)
         encoder_states = [state_h]
     elif rnn_type == 'lstm':
         encoder_outputs, state_h, state_c = LSTM(latent_dim, return_state=True)(enc_emb)
         encoder_states = [state_h, state_c]
     elif rnn_type == 'bilstm':
-        # BiLSTM cuts latent_dim in half so when we combine forward/backward, it equals latent_dim
         encoder_outputs, fh, fc, bh, bc = Bidirectional(LSTM(latent_dim // 2, return_state=True))(enc_emb)
         state_h = Concatenate()([fh, bh])
         state_c = Concatenate()([fc, bc])
@@ -80,11 +81,13 @@ def run_translation_experiment(rnn_type='lstm', epochs=30):
     dec_emb_layer = Embedding(num_decoder_tokens, embedding_dim)
     dec_emb = dec_emb_layer(decoder_inputs)
     
-    if rnn_type in ['rnn', 'gru']:
-        decoder_layer = SimpleRNN(latent_dim, return_sequences=True, return_state=True) if rnn_type == 'rnn' else GRU(latent_dim, return_sequences=True, return_state=True)
+    if rnn_type == 'rnn':
+        decoder_layer = RNN(SimpleRNNCell(latent_dim), return_sequences=True, return_state=True)
+        decoder_outputs, _ = decoder_layer(dec_emb, initial_state=encoder_states)
+    elif rnn_type == 'gru':
+        decoder_layer = RNN(GRUCell(latent_dim), return_sequences=True, return_state=True)
         decoder_outputs, _ = decoder_layer(dec_emb, initial_state=encoder_states)
     else:
-        # LSTM, BiLSTM, and Stacked LSTM all use a standard LSTM for the decoder
         decoder_layer = LSTM(latent_dim, return_sequences=True, return_state=True)
         decoder_outputs, _, _ = decoder_layer(dec_emb, initial_state=encoder_states)
 
@@ -97,7 +100,7 @@ def run_translation_experiment(rnn_type='lstm', epochs=30):
     
     print(f"Training {rnn_type.upper()}...")
     model.fit([encoder_input_data, decoder_input_data], decoder_target_data,
-              batch_size=32, epochs=epochs, validation_split=0.1, verbose=0) # verbose=0 to save screen space
+              batch_size=32, epochs=epochs, validation_split=0.1, verbose=0) 
 
     # --- INFERENCE SETUP ---
     encoder_model = Model(encoder_inputs, encoder_states)
@@ -132,7 +135,6 @@ def translate_and_score(encoder_model, decoder_model, rnn_type, test_index=3):
     padded_seq = pad_sequences(seq, maxlen=max_encoder_seq_length, padding='post')
     states_value = encoder_model.predict(padded_seq, verbose=0)
     
-    # Standardize states_value format just in case
     if not isinstance(states_value, list):
         states_value = [states_value]
         
@@ -145,7 +147,7 @@ def translate_and_score(encoder_model, decoder_model, rnn_type, test_index=3):
     while not stop_condition:
         predictions = decoder_model.predict([target_seq] + states_value, verbose=0)
         output_tokens = predictions[0]
-        states_value = predictions[1:] # The rest are the hidden states
+        states_value = predictions[1:] 
         
         sampled_token_index = np.argmax(output_tokens[0, -1, :])
         sampled_word = reverse_target_word_index.get(sampled_token_index, '')
@@ -160,7 +162,6 @@ def translate_and_score(encoder_model, decoder_model, rnn_type, test_index=3):
 
     predicted_pashto = decoded_sentence.strip()
     
-    # Calculate BLEU
     smoothie = SmoothingFunction().method4 
     bleu_score = sentence_bleu([true_pashto.split()], predicted_pashto.split(), smoothing_function=smoothie)
     
@@ -172,12 +173,9 @@ def translate_and_score(encoder_model, decoder_model, rnn_type, test_index=3):
 # ==========================================
 # 5. RUN THE EXPERIMENTS!
 # ==========================================
-# Warning: Training 5 models back-to-back will take a bit of time on Kaggle!
-# I set epochs to 30 so it runs faster, but you can increase it later.
-
 models_to_test = ['rnn', 'gru', 'lstm', 'bilstm', 'stacked_lstm']
 
 for model_name in models_to_test:
     enc, dec, m_type = run_translation_experiment(rnn_type=model_name, epochs=30)
-    translate_and_score(enc, dec, m_type, test_index=3) # Tests the 4th sentence in your dataset
-    translate_and_score(enc, dec, m_type, test_index=10) # Tests the 11th sentence
+    translate_and_score(enc, dec, m_type, test_index=3) 
+    translate_and_score(enc, dec, m_type, test_index=10)
