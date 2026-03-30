@@ -26,3 +26,14 @@ max_len = max(len(s) for s in sequences)
 sequences = pad_sequences(sequences, maxlen=max_len, padding='pre')
 X = sequences[:, :-1]
 y = tf.keras.utils.to_categorical(sequences[:, -1], num_classes=vocab_size)
+
+#SIMPLE RNN
+
+model_rnn = Sequential([
+    Embedding(vocab_size, 10, input_length=max_len-1),
+    SimpleRNN(50, return_sequences=False),
+    Dense(vocab_size, activation='softmax')
+])
+model_rnn.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+model_rnn.fit(X, y, epochs=100, verbose=0)
+
