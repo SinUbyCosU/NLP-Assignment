@@ -49,4 +49,14 @@ model_lstm.fit(X, y, epochs=100, verbose=0)
 
 #GRU
 
+model_gru = Sequential([
+    Embedding(vocab_size, 10, input_length=max_len-1),
+    GRU(50),
+    Dense(vocab_size, activation='softmax')
+])
+model_gru.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+model_gru.fit(X, y, epochs=100, verbose=0)
+
+#stacked LSTM
+
 
