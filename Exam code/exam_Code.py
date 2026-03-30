@@ -79,3 +79,16 @@ model_bilstm.compile(loss='categorical_crossentropy', optimizer='adam', metrics=
 model_bilstm.fit(X, y, epochs=100, verbose=0)
 
 #works for all
+
+def predict_next(model, text, tokenizer, max_len):
+    seq = tokenizer.texts_to_sequences([text])[0]
+    seq = pad_sequences([seq], maxlen=max_len-1, padding='pre')
+    pred = model.predict(seq, verbose=0)
+    idx = np.argmax(pred)
+    for word, i in tokenizer.word_index.items():
+        if i == idx:
+            return word
+    return None
+
+# Test
+print(predict_next(model_lstm, "deep learning is a", tokenizer, max_len))
