@@ -47,3 +47,6 @@ model_lstm = Sequential([
 model_lstm.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 model_lstm.fit(X, y, epochs=100, verbose=0)
 
+#GRU
+
+
