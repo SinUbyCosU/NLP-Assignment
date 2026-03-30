@@ -69,3 +69,11 @@ model_stacked.compile(loss='categorical_crossentropy', optimizer='adam', metrics
 model_stacked.fit(X, y, epochs=100, verbose=0)
 
 #Bidirectional LSTM
+
+model_bilstm = Sequential([
+    Embedding(vocab_size, 10, input_length=max_len-1),
+    Bidirectional(LSTM(50)),
+    Dense(vocab_size, activation='softmax')
+])
+model_bilstm.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+model_bilstm.fit(X, y, epochs=100, verbose=0)
