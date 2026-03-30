@@ -77,3 +77,5 @@ model_bilstm = Sequential([
 ])
 model_bilstm.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 model_bilstm.fit(X, y, epochs=100, verbose=0)
+
+#works for all
