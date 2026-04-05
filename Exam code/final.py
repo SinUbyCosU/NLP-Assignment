@@ -28,7 +28,7 @@ sequences = pad_sequences(sequences, maxlen=max_len, padding='pre')
 X = sequences[:, :-1]
 y = tf.keras.utils.to_categorical(sequences[:, -1], num_classes=vocab_size)
 
-# ============ MODEL ARCHITECTURES ============
+# MODEL ARCHITECTURES ============
 
 # 1. SIMPLE RNN
 model = Sequential([
