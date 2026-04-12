@@ -100,7 +100,6 @@ def predict_next_word(text):
         if idx == predicted_idx:
             return word
     return None
-
 # ============ TEST ON TEST DATA ============
 print("\n=== Testing on test.csv ===")
 for i, line in enumerate(test_lines[:5]):  # First 5 test cases
