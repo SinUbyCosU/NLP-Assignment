@@ -72,12 +72,12 @@ model = Sequential([
 # ])
 
 # Option 6: LSTM with Dropout
-# model = Sequential([
-#     Embedding(vocab_size, 50, input_length=max_len-1),
-#     LSTM(100, dropout=0.2, recurrent_dropout=0.2),
-#     Dropout(0.2),
-#     Dense(vocab_size, activation='softmax')
-# ])
+ model = Sequential([
+     Embedding(vocab_size, 50, input_length=max_len-1),
+     LSTM(100, dropout=0.2, recurrent_dropout=0.2),
+     Dropout(0.2),
+     Dense(vocab_size, activation='softmax')
+ ])
 
 # ============ COMPILE ============
 model.compile(
