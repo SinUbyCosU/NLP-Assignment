@@ -6,7 +6,13 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 # ============ DATA PREPARATION (Same for all models) ============
-text = "deep learning is a subset of machine learning"
+with open('train.csv', 'r', encoding='utf-8') as f:
+    train_lines = [line.strip() for line in f if line.strip()]
+
+with open('../test.csv', 'r', encoding='utf-8') as f:
+    test_lines = [line.strip() for line in f if line.strip()]
+
+text = ' '.join(train_lines)
 
 # Tokenization
 tokenizer = Tokenizer()
@@ -102,4 +108,5 @@ def predict_next_word(model, text, tokenizer, max_len):
     return None
 
 # Test
-print(predict_next_word(model, "deep learning", tokenizer, max_len))
+test_seed = ' '.join(test_lines[0].split()[:2]) if test_lines else "deep learning"
+print(predict_next_word(model, test_seed, tokenizer, max_len))
