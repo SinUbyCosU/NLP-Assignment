@@ -57,12 +57,12 @@ model = Sequential([
  ])
 
 # Option 4: Stacked LSTM
-# model = Sequential([
-#     Embedding(vocab_size, 50, input_length=max_len-1),
-#     LSTM(100, return_sequences=True),
-#     LSTM(100),
-#     Dense(vocab_size, activation='softmax')
-# ])
+ model = Sequential([
+     Embedding(vocab_size, 50, input_length=max_len-1),
+     LSTM(100, return_sequences=True),
+     LSTM(100),
+     Dense(vocab_size, activation='softmax')
+ ])
 
 # Option 5: Bidirectional LSTM
 # model = Sequential([
