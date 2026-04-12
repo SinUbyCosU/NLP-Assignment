@@ -43,18 +43,18 @@ model = Sequential([
 ])
 
 # Option 2: LSTM
-# model = Sequential([
-#     Embedding(vocab_size, 50, input_length=max_len-1),
-#     LSTM(100),
-#     Dense(vocab_size, activation='softmax')
-# ])
+ model = Sequential([
+     Embedding(vocab_size, 50, input_length=max_len-1),
+     LSTM(100),
+     Dense(vocab_size, activation='softmax')
+ ])
 
 # Option 3: GRU
-# model = Sequential([
-#     Embedding(vocab_size, 50, input_length=max_len-1),
-#     GRU(100),
-#     Dense(vocab_size, activation='softmax')
-# ])
+ model = Sequential([
+     Embedding(vocab_size, 50, input_length=max_len-1),
+     GRU(100),
+     Dense(vocab_size, activation='softmax')
+ ])
 
 # Option 4: Stacked LSTM
 # model = Sequential([
