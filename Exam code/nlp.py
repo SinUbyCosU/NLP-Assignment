@@ -65,11 +65,11 @@ model = Sequential([
  ])
 
 # Option 5: Bidirectional LSTM
-# model = Sequential([
-#     Embedding(vocab_size, 50, input_length=max_len-1),
-#     Bidirectional(LSTM(100)),
-#     Dense(vocab_size, activation='softmax')
-# ])
+ model = Sequential([
+     Embedding(vocab_size, 50, input_length=max_len-1),
+     Bidirectional(LSTM(100)),
+     Dense(vocab_size, activation='softmax')
+ ])
 
 # Option 6: LSTM with Dropout
  model = Sequential([
