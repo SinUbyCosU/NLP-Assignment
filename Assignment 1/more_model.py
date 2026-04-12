@@ -10,13 +10,17 @@ from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 # ==========================================
 # 1. LOAD AND CLEAN THE DATASET
 # ==========================================
-file_path = '/kaggle/input/datasets/tanushreeyadavaghhhh/pashtoon-dataset/Data.csv'
-df = pd.read_csv(file_path, on_bad_lines='skip')
-df.columns = df.columns.str.strip() 
-df = df.dropna(subset=['English', 'Pashto'])
+train_file_path = '../Exam code/train.csv'
+test_file_path = '../Exam code/test.csv'
+train_df = pd.read_csv(train_file_path, on_bad_lines='skip')
+test_df = pd.read_csv(test_file_path, on_bad_lines='skip')
+train_df.columns = train_df.columns.str.strip()
+test_df.columns = test_df.columns.str.strip()
+train_df = train_df.dropna(subset=['English', 'Pashto'])
+test_df = test_df.dropna(subset=['English', 'Pashto'])
 
-input_texts = df['English'].astype(str).tolist()
-target_texts = ['<start> ' + text + ' <end>' for text in df['Pashto'].astype(str).tolist()]
+input_texts = train_df['English'].astype(str).tolist()
+target_texts = ['<start> ' + text + ' <end>' for text in train_df['Pashto'].astype(str).tolist()]
 
 # ==========================================
 # 2. TOKENIZATION & PADDING
@@ -128,8 +132,11 @@ def run_translation_experiment(rnn_type='lstm', epochs=30):
 # 4. TRANSLATION AND SCORING
 # ==========================================
 def translate_and_score(encoder_model, decoder_model, rnn_type, test_index=3):
-    english_sentence = df['English'].iloc[test_index]
-    true_pashto = df['Pashto'].iloc[test_index]
+    if test_index >= len(test_df):
+        return
+
+    english_sentence = test_df['English'].iloc[test_index]
+    true_pashto = test_df['Pashto'].iloc[test_index]
     
     seq = input_tokenizer.texts_to_sequences([english_sentence])
     padded_seq = pad_sequences(seq, maxlen=max_encoder_seq_length, padding='post')

@@ -10,21 +10,26 @@ from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 # ==========================================
 # 1. LOAD AND CLEAN THE DATASET
 # ==========================================
-file_path = '/kaggle/input/datasets/tanushreeyadavaghhhh/pashtoon-dataset/Data.csv'
-print(f"Loading dataset from: {file_path}")
+train_file_path = '../Exam code/train.csv'
+test_file_path = '../Exam code/test.csv'
+print(f"Loading training dataset from: {train_file_path}")
+print(f"Loading testing dataset from: {test_file_path}")
 
 # Load data, skipping lines that are broken by stray commas
-df = pd.read_csv(file_path, on_bad_lines='skip')
+train_df = pd.read_csv(train_file_path, on_bad_lines='skip')
+test_df = pd.read_csv(test_file_path, on_bad_lines='skip')
 
 # Strip hidden spaces from column headers to prevent KeyError
-df.columns = df.columns.str.strip() 
+train_df.columns = train_df.columns.str.strip()
+test_df.columns = test_df.columns.str.strip()
 
 # Drop empty rows
-df = df.dropna(subset=['English', 'Pashto'])
+train_df = train_df.dropna(subset=['English', 'Pashto'])
+test_df = test_df.dropna(subset=['English', 'Pashto'])
 
 # Extract texts and add start/end tokens to the target language
-input_texts = df['English'].astype(str).tolist()
-target_texts = ['<start> ' + text + ' <end>' for text in df['Pashto'].astype(str).tolist()]
+input_texts = train_df['English'].astype(str).tolist()
+target_texts = ['<start> ' + text + ' <end>' for text in train_df['Pashto'].astype(str).tolist()]
 
 # ==========================================
 # 2. TOKENIZATION & PADDING
@@ -152,12 +157,12 @@ def translate_sentence(input_sentence):
 print("\n--- Translation Error Test (BLEU Score) ---")
 
 # Test on a few samples from the dataset
-test_indices = [0, 2, 4] 
+test_indices = [idx for idx in [0, 2, 4] if idx < len(test_df)]
 smoothie = SmoothingFunction().method4 
 
 for idx in test_indices:
-    english_sentence = df['English'].iloc[idx]
-    true_pashto = df['Pashto'].iloc[idx]
+    english_sentence = test_df['English'].iloc[idx]
+    true_pashto = test_df['Pashto'].iloc[idx]
     
     predicted_pashto = translate_sentence(english_sentence)
     
