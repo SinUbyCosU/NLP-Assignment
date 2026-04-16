@@ -95,7 +95,7 @@ model.compile(
 )
 model.fit(X, y, epochs=100, verbose=0)
 
-# ============ PREDICTION FUNCTION ============
+#  PREDICTION FUNCTION ============
 def predict_next_word(model, text, tokenizer, max_len):
     seq = tokenizer.texts_to_sequences([text])[0]
     seq = pad_sequences([seq], maxlen=max_len-1, padding='pre')
