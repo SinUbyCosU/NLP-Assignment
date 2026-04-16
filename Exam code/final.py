@@ -87,7 +87,7 @@ model = Sequential([
     Dense(vocab_size, activation='softmax')
 ])
 
-# ============ TRAINING (Same for all) ============
+# TRAINING (Same for all) 
 model.compile(
     loss='categorical_crossentropy',
     optimizer='adam',
