@@ -106,7 +106,6 @@ def predict_next_word(model, text, tokenizer, max_len):
         if idx == predicted_idx:
             return word
     return None
-
 # Test
 test_seed = ' '.join(test_lines[0].split()[:2]) if test_lines else "deep learning"
 print(predict_next_word(model, test_seed, tokenizer, max_len))
