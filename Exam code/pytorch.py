@@ -86,8 +86,6 @@ optimizer = optim.Adam(model.parameters(), lr=0.005)
 
 # train and validate
 epochs = 50
-print(f"Training on {device}...")
-
 for epoch in range(epochs):
     # training phase
     model.train()
@@ -123,9 +121,9 @@ for epoch in range(epochs):
     val_perp = math.exp(avg_val_loss) if avg_val_loss > 0 else float('inf')
     
     if (epoch + 1) % 5 == 0:
-        print(f"Epoch {epoch+1}/{epochs} | "
-              f"Train Loss: {avg_train_loss:.4f}, Train Perp: {train_perp:.2f} | "
-              f"Val Loss: {avg_val_loss:.4f}, Val Perp: {val_perp:.2f}")
+        print(f"epoch {epoch+1}/{epochs} | "
+              f"Trein Loss: {avg_train_loss:.4f}, Train Perp: {train_perp:.2f} | "
+              f"val Loss: {avg_val_loss:.4f}, val Perp: {val_perp:.2f}")
 
 # predict function
 def predict_next_word(text):
@@ -144,7 +142,7 @@ def predict_next_word(text):
     return idx2word.get(predicted_idx, "<UNKNOWN>")
 
 # test on test data
-print("\n=== Testing on test.csv ===")
+
 for i, line in enumerate(test_lines[:5]): 
     if len(line) >= 2:
         seed = ' '.join(line[:-1])
