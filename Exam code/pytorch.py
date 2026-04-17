@@ -151,8 +151,8 @@ for i, line in enumerate(test_lines[:5]):
         actual = line[-1]
         predicted = predict_next_word(seed)
         
-        print(f"Test {i+1}:")
-        print(f"  Input: {seed}")
-        print(f"  Predicted: {predicted}")
+        print(f"test {i+1}:")
+        print(f"  input: {seed}")
+        print(f" predicted: {predicted}")
         print(f"  Actual: {actual}")
-        print(f"  Match: {predicted == actual}\n")
+        print(f" match: {predicted == actual}\n")
