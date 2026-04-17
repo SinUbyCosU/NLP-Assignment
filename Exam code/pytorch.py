@@ -1,202 +1,120 @@
 import math
 import os
-from pathlib import Path
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 batch_size = 32
 epochs = int(os.getenv("EPOCHS", "50"))
-base_dir = Path(__file__).resolve().parent
 
+# read files directly
+with open("train.csv", "r", encoding="utf-8") as f:
+    train_words = f.read().split()
+with open("val.csv", "r", encoding="utf-8") as f:
+    val_words = f.read().split()
+with open("test.csv", "r", encoding="utf-8") as f:
+    test_lines = [line.strip().split() for line in f if line.strip()]
 
-def resolve_data_file(file_name):
-    candidates = [base_dir / file_name, base_dir.parent / file_name]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    return candidates[0]
-
-
-def read_words(file_path):
-    with open(file_path, "r", encoding="utf-8") as file_handle:
-        text = " ".join(line.strip() for line in file_handle if line.strip())
-    return text.split()
-
-
-def read_test_lines(file_path):
-    with open(file_path, "r", encoding="utf-8") as file_handle:
-        return [line.strip().split() for line in file_handle if line.strip()]
-
-
-def build_vocab(words):
-    vocab = {word: index + 1 for index, word in enumerate(set(words))}
-    vocab["<PAD>"] = 0
-    return vocab, {index: word for word, index in vocab.items()}
-
-
-def build_sequences(words, vocab_map, use_default_zero=False):
-    sequences = []
-    for end_index in range(1, len(words)):
-        if use_default_zero:
-            sequence = [vocab_map.get(word, 0) for word in words[: end_index + 1]]
-        else:
-            sequence = [vocab_map[word] for word in words[: end_index + 1]]
-        sequences.append(sequence)
-    return sequences
-
-
-def pad_train_sequences(sequences):
-    max_len = max(len(sequence) for sequence in sequences)
-    input_len = max_len - 1
-
-    features, targets = [], []
-    for sequence in sequences:
-        padded = [0] * (max_len - len(sequence)) + sequence[:-1]
-        features.append(padded)
-        targets.append(sequence[-1])
-
-    return features, targets, max_len, input_len
-
-
-def pad_validation_sequences(sequences, max_len, input_len):
-    features, targets = [], []
-
-    for sequence in sequences:
-        if len(sequence) < 2:
-            continue
-
-        padded = [0] * max(0, max_len - len(sequence)) + sequence[:-1]
-        features.append(padded[-input_len:])
-        targets.append(sequence[-1])
-
-    return features, targets
-
-
-train_words = read_words(resolve_data_file("train.csv"))
-val_words = read_words(resolve_data_file("val.csv"))
-test_lines = read_test_lines(resolve_data_file("test.csv"))
-
-vocab, idx2word = build_vocab(train_words)
+# build vocabulary
+vocab = {w: i + 1 for i, w in enumerate(set(train_words))}
+vocab["<pad>"] = 0
+idx2word = {i: w for w, i in vocab.items()}
 vocab_size = len(vocab)
 
-train_sequences = build_sequences(train_words, vocab)
-X_train, y_train, max_len, seq_length = pad_train_sequences(train_sequences)
+# helper to generate sequences
+def get_seqs(words):
+    return [[vocab.get(w, 0) for w in words[:i+1]] for i in range(1, len(words))]
 
-val_sequences = build_sequences(val_words, vocab, use_default_zero=True)
-X_val, y_val = pad_validation_sequences(val_sequences, max_len, seq_length)
+train_seqs = get_seqs(train_words)
+val_seqs = get_seqs(val_words)
 
-train_dataset = torch.utils.data.TensorDataset(
-    torch.tensor(X_train, dtype=torch.long),
-    torch.tensor(y_train, dtype=torch.long),
-)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+max_len = max(len(s) for s in train_seqs)
+seq_len = max_len - 1
 
-val_dataset = torch.utils.data.TensorDataset(
-    torch.tensor(X_val, dtype=torch.long),
-    torch.tensor(y_val, dtype=torch.long),
-)
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+# pad and tensorize
+def pad_data(seqs):
+    x_data, y_data = [], []
+    for s in seqs:
+        if len(s) < 2: continue
+        # pre-pad with zeros and truncate to seq_len
+        padded = ([0] * max(0, max_len - len(s)) + s[:-1])[-seq_len:]
+        x_data.append(padded)
+        y_data.append(s[-1])
+    return torch.tensor(x_data, dtype=torch.long), torch.tensor(y_data, dtype=torch.long)
 
+X_train, y_train = pad_data(train_seqs)
+X_val, y_val = pad_data(val_seqs)
 
+# dataloaders
+train_loader = torch.utils.data.DataLoader(
+    torch.utils.data.TensorDataset(X_train, y_train), batch_size=batch_size, shuffle=True)
+
+val_loader = torch.utils.data.DataLoader(
+    torch.utils.data.TensorDataset(X_val, y_val), batch_size=batch_size, shuffle=False)
+
+# model definition
 class NextWordModel(nn.Module):
-    def __init__(self, vocab_size, embed_dim=50, hidden_dim=100, rnn_type="LSTM"):
+    def __init__(self):
         super().__init__()
-        self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
+        self.emb = nn.Embedding(vocab_size, 50, padding_idx=0)
+        self.lstm = nn.LSTM(50, 100, batch_first=True, dropout=0.2, num_layers=2)
+        self.fc = nn.Linear(100, vocab_size)
 
-        if rnn_type == "RNN":
-            self.rnn = nn.RNN(embed_dim, hidden_dim, batch_first=True)
-        elif rnn_type == "GRU":
-            self.rnn = nn.GRU(embed_dim, hidden_dim, batch_first=True)
-        else:
-            self.rnn = nn.LSTM(
-                embed_dim,
-                hidden_dim,
-                batch_first=True,
-                dropout=0.2,
-                num_layers=2,
-            )
+    def forward(self, x):
+        out, _ = self.lstm(self.emb(x))
+        return self.fc(out[:, -1, :]) # just grab the last time step
 
-        self.fc = nn.Linear(hidden_dim, vocab_size)
-
-    def forward(self, inputs):
-        embeddings = self.embedding(inputs)
-        outputs, _ = self.rnn(embeddings)
-        return self.fc(outputs[:, -1, :])
-
-
-model = NextWordModel(vocab_size, rnn_type="LSTM").to(device)
+model = NextWordModel().to(device)
 criterion = nn.CrossEntropyLoss(ignore_index=0, label_smoothing=0.1)
 optimizer = optim.Adam(model.parameters(), lr=0.005)
 
-
-for epoch in range(epochs):
+# training loop
+for ep in range(epochs):
     model.train()
-    train_loss_total = 0.0
-
-    for batch_X, batch_y in train_loader:
-        batch_X = batch_X.to(device)
-        batch_y = batch_y.to(device)
-
+    t_loss = 0
+    for x, y in train_loader:
+        x, y = x.to(device), y.to(device)
         optimizer.zero_grad()
-        logits = model(batch_X)
-        loss = criterion(logits, batch_y)
+        loss = criterion(model(x), y)
         loss.backward()
         optimizer.step()
-
-        train_loss_total += loss.item()
-
-    avg_train_loss = train_loss_total / len(train_loader)
-    train_perplexity = math.exp(avg_train_loss)
+        t_loss += loss.item()
 
     model.eval()
-    val_loss_total = 0.0
-
+    v_loss = 0
     with torch.no_grad():
-        for batch_X, batch_y in val_loader:
-            batch_X = batch_X.to(device)
-            batch_y = batch_y.to(device)
-            logits = model(batch_X)
-            loss = criterion(logits, batch_y)
-            val_loss_total += loss.item()
+        for x, y in val_loader:
+            x, y = x.to(device), y.to(device)
+            v_loss += criterion(model(x), y).item()
 
-    avg_val_loss = val_loss_total / len(val_loader) if len(val_loader) > 0 else 0
-    val_perplexity = math.exp(avg_val_loss) if avg_val_loss > 0 else float("inf")
+    # log stats every 5 epochs
+    if (ep + 1) % 5 == 0:
+        avg_t = t_loss / len(train_loader)
+        avg_v = v_loss / len(val_loader) if len(val_loader) else 0
+        
+        print(f"epoch {ep+1}/{epochs} | "
+              f"train loss: {avg_t:.4f} perp: {math.exp(avg_t):.2f} | "
+              f"val loss: {avg_v:.4f} perp: {math.exp(avg_v):.2f}")
 
-    if (epoch + 1) % 5 == 0:
-        print(
-            f"epoch {epoch + 1}/{epochs} | "
-            f"Train Loss: {avg_train_loss:.4f}, Train Perp: {train_perplexity:.2f} | "
-            f"val Loss: {avg_val_loss:.4f}, val Perp: {val_perplexity:.2f}"
-        )
-
-
-def predict_next_word(text):
+# test prediction helper
+def predict(text):
     model.eval()
-    words = text.split()
-    sequence = [vocab.get(word, 0) for word in words]
-
-    padded = [0] * max(0, seq_length - len(sequence)) + sequence[-seq_length:]
-
+    s = [vocab.get(w, 0) for w in text.split()]
+    padded = ([0] * max(0, seq_len - len(s)) + s)[-seq_len:]
+    
     with torch.no_grad():
-        inputs = torch.tensor([padded], dtype=torch.long).to(device)
-        logits = model(inputs)
-        predicted_idx = torch.argmax(logits, dim=-1).item()
+        x = torch.tensor([padded], dtype=torch.long).to(device)
+        idx = torch.argmax(model(x), dim=-1).item()
+        
+    return idx2word.get(idx, "<unk>")
 
-    return idx2word.get(predicted_idx, "<UNKNOWN>")
-
-
-for index, line in enumerate(test_lines[:5]):
+# run tests
+print("\ntest")
+for i, line in enumerate(test_lines[:5]):
     if len(line) >= 2:
         seed = " ".join(line[:-1])
+        pred = predict(seed)
         actual = line[-1]
-        predicted = predict_next_word(seed)
-
-        print(f"test {index + 1}:")
-        print(f"  input: {seed}")
-        print(f" predicted: {predicted}")
-        print(f"  Actual: {actual}")
-        print(f" match: {predicted == actual}\n")
+        
+        print(f"test {i+1}: input '{seed}' -> pred '{pred}' | actual: '{actual}' | match: {pred == actual}")
