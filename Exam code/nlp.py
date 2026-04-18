@@ -5,7 +5,7 @@ from tensorflow.keras.layers import Embedding, Dense, SimpleRNN, LSTM, GRU, Bidi
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
-# ============ LOAD DATA ============
+# ============ LOAD DATA
 with open('train.csv', 'r', encoding='utf-8') as f:
     train_text = ' '.join([line.strip() for line in f if line.strip()])
 
