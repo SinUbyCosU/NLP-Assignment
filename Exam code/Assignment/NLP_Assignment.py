@@ -28,6 +28,7 @@ word_to_idx = vocab
 idx_to_word = {i: w for w, i in vocab.items()}
 
 # create sequences
+
 def make_sequences(words):
     sequences = []
     for i in range(1, len(words)):
@@ -49,6 +50,7 @@ def prepare_data(sequences):
         # Convert to indices
         indices = [word_to_idx.get(w, 0) for w in seq]
         # Pad if needed
+        
         while len(indices) < max_length:
             indices.insert(0, 0)
         X.append(indices[:-1])
@@ -114,7 +116,12 @@ for epoch in range(epochs):
     if (epoch + 1) % 5 == 0:
         avg_train = train_loss / len(train_loader)
         avg_val = val_loss / len(val_loader)
-        print(f"epoch {epoch+1}/{epochs} - train Loss: {avg_train:.4f} - Val Loss: {avg_val:.4f}")
+        train_perplexity = math.exp(avg_train)
+        val_perplexity = math.exp(avg_val)
+        print(
+            f"epoch {epoch+1}/{epochs} - train Loss: {avg_train:.4f} - train Perplexity: {train_perplexity:.2f} "
+            f"- Val Loss: {avg_val:.4f} - Val Perplexity: {val_perplexity:.2f}"
+        )
 
 # test
 def predict_next_word(text):
