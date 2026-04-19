@@ -52,4 +52,46 @@ loss.backward()
 # Only lora_A and lora_B get gradients!
 # weight.grad = None (frozen)
 # lora_A.grad = [values]
+class LoRAAttention(nn.Module):
+    def __init__(self, dim=768, num_heads=12, rank=8):
+        super().__init__()
+        
+        # Standard projections (frozen)
+        self.W_q = LoRALinear(dim, dim, rank=rank)
+        self.W_k = nn.Linear(dim, dim)  # No LoRA (frozen entirely)
+        self.W_v = LoRALinear(dim, dim, rank=rank)
+        self.W_o = nn.Linear(dim, dim)  # No LoRA (frozen entirely)
+        
+        # Freeze non-LoRA weights
+        for param in self.W_k.parameters():
+            param.requires_grad = False
+        for param in self.W_o.parameters():
+            param.requires_grad = False
+        
+        self.num_heads = num_heads
+        self.head_dim = dim // num_heads
+    
+    def forward(self, x):
+        batch_size, seq_len, dim = x.shape
+        
+        # Projections (only Q and V use LoRA)
+        Q = self.W_q(x)  # Uses LoRA
+        K = self.W_k(x)  # Frozen
+        V = self.W_v(x)  # Uses LoRA
+        
+        # Reshape for multi-head
+        Q = Q.view(batch_size, seq_len, self.num_heads, self.head_dim)
+        K = K.view(batch_size, seq_len, self.num_heads, self.head_dim)
+        V = V.view(batch_size, seq_len, self.num_heads, self.head_dim)
+        
+        # Attention computation
+        scores = torch.einsum('bqhd,bkhd->bhqk', Q, K) / math.sqrt(self.head_dim)
+        attn_weights = torch.softmax(scores, dim=-1)
+        output = torch.einsum('bhqk,bvhd->bqhd', attn_weights, V)
+        
+        # Reshape back
+        output = output.reshape(batch_size, seq_len, dim)
+        
+        # Output projection (frozen)
+        return self.W_o(output)
 # lora_B.grad = [values]
