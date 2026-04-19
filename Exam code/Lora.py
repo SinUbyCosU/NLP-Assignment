@@ -95,3 +95,18 @@ class LoRAAttention(nn.Module):
         # Output projection (frozen)
         return self.W_o(output)
 # lora_B.grad = [values]
+def merge_lora_weights(layer):
+    """
+    Merge LoRA weights into base weights for deployment
+    """
+    # Compute the low-rank update
+    delta_W = layer.lora_A @ layer.lora_B  # [in, rank] @ [rank, out]
+    
+    # Add to frozen weights
+    merged_weight = layer.weight + (layer.scaling * delta_W.T)
+    
+    # Create new standard layer
+    new_layer = nn.Linear(layer.weight.shape[1], layer.weight.shape[0])
+    new_layer.weight.data = merged_weight
+    
+    return new_layer
