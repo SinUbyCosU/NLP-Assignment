@@ -35,3 +35,21 @@ class LoRALinear(nn.Module):
         
         # Combine
         return result + self.scaling * lora_result
+
+# Create layer
+layer = LoRALinear(in_features=768, out_features=768, rank=8)
+
+# Input
+x = torch.randn(32, 768)  # batch_size=32, dim=768
+
+# Forward pass
+output = layer(x)  # [32, 768]
+
+# During training
+loss = compute_loss(output, target)
+loss.backward()
+
+# Only lora_A and lora_B get gradients!
+# weight.grad = None (frozen)
+# lora_A.grad = [values]
+# lora_B.grad = [values]
