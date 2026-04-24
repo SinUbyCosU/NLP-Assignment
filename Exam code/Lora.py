@@ -14,6 +14,7 @@ class LoRALinear(nn.Module):
         super().__init__()
         
         # Frozen pre-trained weight
+        
         self.weight = nn.Parameter(torch.randn(out_features, in_features))
         self.weight.requires_grad = False  # FREEZE!
         
