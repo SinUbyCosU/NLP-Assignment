@@ -103,7 +103,6 @@ def merge_lora_weights(layer):
     delta_W = layer.lora_A @ layer.lora_B  # [in, rank] @ [rank, out]
     
     # Add to frozen weights
-    
     merged_weight = layer.weight + (layer.scaling * delta_W.T)
     
     # Create new standard layer
