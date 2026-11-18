@@ -109,5 +109,4 @@ def merge_lora_weights(layer):
     # Create new standard layer
     new_layer = nn.Linear(layer.weight.shape[1], layer.weight.shape[0])
     new_layer.weight.data = merged_weight
-    
-    return new_layer
+return new_layer
